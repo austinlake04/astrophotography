@@ -1,2 +1,9 @@
-# python-template
-Template repository for Python projects
+# astrophotography
+
+Image processing library for astrophotography
+---------------------------------------------
+
+## Depenecies
+1. Rawpy
+2. Numpy
+3. PyTorch
