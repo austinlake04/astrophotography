@@ -1,4 +1,4 @@
-# astrophotography
+# astrocyte
 
 Image processing library for astrophotography
 ---------------------------------------------
