@@ -1,0 +1,14 @@
+name: astrocyte
+channels:
+  - conda-forge
+dependencies:
+  - python
+  - pip
+  - ipykernel
+  - ipywidgets
+  - tqdm
+  - numpy
+  - matplotlib
+  - opencv
+  - pip:
+    - rawpy
