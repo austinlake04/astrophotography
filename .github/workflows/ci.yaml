@@ -1,0 +1,44 @@
+name: CI
+
+on: [push, pull_request]
+
+permissions:
+  contents: read
+
+jobs:
+  integration:
+    runs-on: ${{ matrix.os }}
+    defaults:
+      run:
+        shell: bash -l {0}
+
+    strategy:
+      fail-fast: true
+      matrix:
+        os: [ubuntu-latest, macos-latest, windows-latest]
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v3
+      - name: Setup Python
+        uses: actions/setup-python@v4
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install astrosight
+          pip install autoflake isort black flake8 flake8-docstrings pytest
+      - name: Remove unused imports
+        run: |
+          autoflake --quiet --in-place --remove-all-unused-imports --remove-unused-variables -r .
+      - name: Format imports
+        run: |
+          isort -q --om --profile=black .
+      - name: Format code
+        run: |
+          black -q .
+      - name: Lint
+        run: |
+          flake8 -q --docstring-convention numpy .
+      - name: Test
+        run: |
+          pytest -q .

@@ -136,7 +136,7 @@ ApplicationWindow {
         }
 
         onClicked: {
-            console.log("clicked", index)            
+            console.log("clicked", index)
             fileManagement.printPath(index.model, index)
         }
         onDoubleClicked: isExpanded(index) ? collapse(index) : expand(index)
