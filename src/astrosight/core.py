@@ -2,6 +2,8 @@
 
 import argparse
 import os
+import sys
+from tkinter import filedialog as fd
 from typing import Optional
 
 import cv2
@@ -9,6 +11,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 import rawpy
 from astropy.io import fits
+from PyQt5.QtGui import QGuiApplication
 from PyQt5.QtWidgets import QFileDialog
 from scipy.signal import find_peaks
 from tqdm import tqdm
@@ -504,6 +507,7 @@ if __name__ == "__main__":
     arguments = parser.parse_args()
 
     def select_files() -> list[str]:
+        QGuiApplication(sys.argv)
         dialog = QFileDialog()
         dialog.setDirectory(".")
         dialog.setFileMode(QFileDialog.FileMode.ExistingFiles)
@@ -517,19 +521,23 @@ if __name__ == "__main__":
             filenames = dialog.selectedFiles()
             return filenames
 
+    prompt = "Image files (*.NEF *.ARW *.SRF *.SR2 *.MEF *.ORF *.SRW *.ERF *.KDC *.DCS \
+                          *.RW2 *.RAF *.DCR *.DNG *.PEF *.CRW *.CHDK *.IIQ *.3FR *.NRW \
+                          *.NEF *.MOS *.CR2 *.ARI)"
+
     file_tree = {}
     print("Please select core images")
 
     print("Selecting light frames...")
-    file_tree["Light"] = select_files()
+    file_tree["Light"] = fd.askopenfilenames(title="Select light frames")
     print("Selecting bias frames...")
-    file_tree["Bias"] = select_files()
+    file_tree["Bias"] = fd.askopenfilenames(title="Select bias frames")
     print("Selecting dark frames...")
-    file_tree["Dark"] = select_files()
+    file_tree["Dark"] = fd.askopenfilenames(title="Select dark frames")
     print("Selecting flat frames...")
-    file_tree["Flat"] = select_files()
+    file_tree["Flat"] = fd.askopenfilenames(title="Select flat frames")
     print("Selecting dark flat frames...")
-    file_tree["Dark Flat"] = select_files()
+    file_tree["Dark Flat"] = fd.askopenfilenames(title="Select dark flat frames")
     # file_tree["Light"] = glob.glob("./sample_data/Light/*")
     # file_tree["Bias"] = glob.glob("./sample_data/Bias/*")
     # file_tree["Dark"] = glob.glob("./sample_data/Dark/*")
