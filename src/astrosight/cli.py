@@ -38,7 +38,6 @@ def create_tree(quiet: bool = False) -> dict[list[str]]:
     """
     file_tree = {}
     print("Select core images...")
-
     file_tree["Light"] = glob.glob("./test_data/Light/*")  # select_files()
     file_tree["Bias"] = glob.glob("./test_data/Bias/*")  # select_files()
     file_tree["Dark"] = glob.glob("./test_data/Dark/*")  # select_files()

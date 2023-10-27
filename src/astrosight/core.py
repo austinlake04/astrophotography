@@ -1,5 +1,6 @@
 """Core image processing functionality."""
 
+import argparse
 import os
 from typing import Optional
 
@@ -7,6 +8,9 @@ import cv2
 import matplotlib.pyplot as plt
 import numpy as np
 import rawpy
+from astropy.io import fits
+from PyQt5.QtWidgets import QFileDialog
+from scipy.signal import find_peaks
 from tqdm import tqdm
 
 
@@ -70,12 +74,20 @@ def master_calibration(
             for i, bias_file in enumerate(
                 tqdm(file_tree["Bias"], desc="Loading bias frames", disable=quiet)
             ):
-                with rawpy.imread(bias_file) as raw:
-                    if master_bias is None:
-                        master_bias = np.empty(
-                            (len(file_tree["Bias"]), *raw.raw_image.shape)
-                        )
-                    master_bias[i] = raw.raw_image
+                if bias_file[-5::] == ".fits" or bias_file[-4::] == ".fts":
+                    with fits.open(bias_file) as hdul:
+                        if master_bias is None:
+                            master_bias = np.empty(
+                                (len(file_tree["Bias"]), *hdul[0].data.shape)
+                            )
+                        master_bias[i] = hdul[0].data
+                else:
+                    with rawpy.imread(bias_file) as raw:
+                        if master_bias is None:
+                            master_bias = np.empty(
+                                (len(file_tree["Bias"]), *raw.raw_image.shape)
+                            )
+                        master_bias[i] = raw.raw_image
         if master_bias is not None:
             master_bias = np.mean(master_bias, axis=0)
     except rawpy.LibRawError:
@@ -88,12 +100,20 @@ def master_calibration(
             for i, dark_file in enumerate(
                 tqdm(file_tree["Dark"], desc="Loading dark frames", disable=quiet)
             ):
-                with rawpy.imread(dark_file) as raw:
-                    if master_dark is None:
-                        master_dark = np.empty(
-                            (len(file_tree["Dark"]), *raw.raw_image.shape)
-                        )
-                    master_dark[i] = raw.raw_image
+                if dark_file[-5::] == ".fits" or dark_file[-4::] == ".fts":
+                    with fits.open(dark_file) as hdul:
+                        if master_dark is None:
+                            master_dark = np.empty(
+                                (len(file_tree["Dark"]), *hdul[0].data.shape)
+                            )
+                        master_dark[i] = hdul[0].data
+                else:
+                    with rawpy.imread(dark_file) as raw:
+                        if master_dark is None:
+                            master_dark = np.empty(
+                                (len(file_tree["Dark"]), *raw.raw_image.shape)
+                            )
+                        master_dark[i] = raw.raw_image
         if master_dark is not None:
             master_dark = np.median(master_dark, axis=0)
     except rawpy.LibRawError:
@@ -103,19 +123,27 @@ def master_calibration(
     try:
         master_dark_flat = None
         if len(file_tree["Dark Flat"]):
-            for i, flat_file in enumerate(
+            for i, dark_flat_file in enumerate(
                 tqdm(
                     file_tree["Dark Flat"],
                     desc="Loading dark flat frames",
                     disable=quiet,
                 )
             ):
-                with rawpy.imread(flat_file) as raw:
-                    if master_dark_flat is None:
-                        master_dark_flat = np.empty(
-                            (len(file_tree["Dark Flat"]), *raw.raw_image.shape)
-                        )
-                    master_dark_flat[i] = raw.raw_image
+                if dark_flat_file[-5::] == ".fits" or dark_flat_file[-4::] == ".fts":
+                    with fits.open(dark_flat_file) as hdul:
+                        if master_dark_flat is None:
+                            master_dark_flat = np.empty(
+                                (len(file_tree["Dark Flat"]), *hdul[0].data.shape)
+                            )
+                        master_dark_flat[i] = hdul[0].data
+                else:
+                    with rawpy.imread(dark_flat_file) as raw:
+                        if master_dark_flat is None:
+                            master_dark_flat = np.empty(
+                                (len(file_tree["Dark Flat"]), *raw.raw_image.shape)
+                            )
+                        master_dark_flat[i] = raw.raw_image
         if master_dark_flat is not None:
             master_dark_flat = np.median(master_dark_flat, axis=0)
             if master_bias:
@@ -130,12 +158,20 @@ def master_calibration(
             for i, flat_file in enumerate(
                 tqdm(file_tree["Flat"], desc="Loading flat frames", disable=quiet)
             ):
-                with rawpy.imread(flat_file) as raw:
-                    if master_flat is None:
-                        master_flat = np.empty(
-                            (len(file_tree["Flat"]), *raw.raw_image.shape)
-                        )
-                    master_flat[i] = raw.raw_image
+                if flat_file[-5::] == ".fits" or flat_file[-4::] == ".fts":
+                    with fits.open(flat_file) as hdul:
+                        if master_flat is None:
+                            master_flat = np.empty(
+                                (len(file_tree["Flat"]), *hdul[0].data.shape)
+                            )
+                        master_flat[i] = hdul[0].data
+                else:
+                    with rawpy.imread(flat_file) as raw:
+                        if master_flat is None:
+                            master_flat = np.empty(
+                                (len(file_tree["Flat"]), *raw.raw_image.shape)
+                            )
+                        master_flat[i] = raw.raw_image
         if master_flat is not None:
             master_flat = np.median(master_flat, axis=0)
             if master_bias:
@@ -157,6 +193,7 @@ def load(
     master_dark: Optional[np.ndarray] = None,
     master_flat: Optional[np.ndarray] = None,
     feature_detector: str = "ORB",
+    black_and_white: bool = False,
 ) -> tuple[Optional[np.ndarray], Optional[tuple[cv2.KeyPoint]], Optional[np.ndarray]]:
     """Loads and processes an astrophotography image at a specified file path.
 
@@ -187,36 +224,49 @@ def load(
     ], "Invalid feature detector type."
 
     try:
-        with rawpy.imread(raw_file) as raw:
-            image = raw.raw_image
-            image = calibrate(image, master_dark, master_flat)
-            np.copyto(raw.raw_image, image)
-            params = rawpy.Params(
-                gamma=(1, 1),
-                no_auto_scale=False,
-                no_auto_bright=True,
-                output_bps=16,
-                use_camera_wb=True,
-                use_auto_wb=False,
-                user_wb=None,
-                output_color=rawpy.ColorSpace.sRGB,
-                demosaic_algorithm=rawpy.DemosaicAlgorithm.AHD,
-                fbdd_noise_reduction=rawpy.FBDDNoiseReductionMode.Full,
-                dcb_enhance=False,
-                dcb_iterations=0,
-                half_size=False,
-                median_filter_passes=0,
-                user_black=0,
-            )
-            image = raw.postprocess(params)
-            image = cv2.cvtColor(image, cv2.COLOR_GRAY2RGB)
-            if feature_detector == "ORB":
-                detector = cv2.ORB_create()
-            elif feature_detector == "SIFT":
-                detector = cv2.SIFT_create()
-            else:
-                detector = cv2.AKAZE_create()
-            keypoints, descriptors = detector.detectAndCompute(downsample(image), None)
+        if raw_file[-5::] == ".fits" or raw_file[-4::] == ".fts":
+            with fits.open(raw_file) as hdul:
+                image = hdul[0].data
+                image = calibrate(image, master_dark, master_flat)
+        else:
+            with rawpy.imread(raw_file) as raw:
+                image = raw.raw_image
+                image = calibrate(image, master_dark, master_flat)
+                if not black_and_white:
+                    np.copyto(raw.raw_image, image)
+                    params = rawpy.Params(
+                        gamma=(1, 1),
+                        no_auto_scale=False,
+                        no_auto_bright=True,
+                        output_bps=16,
+                        use_camera_wb=True,
+                        use_auto_wb=False,
+                        user_wb=None,
+                        output_color=rawpy.ColorSpace.sRGB,
+                        demosaic_algorithm=rawpy.DemosaicAlgorithm.AHD,
+                        fbdd_noise_reduction=rawpy.FBDDNoiseReductionMode.Full,
+                        dcb_enhance=False,
+                        dcb_iterations=0,
+                        half_size=False,
+                        median_filter_passes=0,
+                        user_black=0,
+                    )
+                    image = raw.postprocess(params)
+        if np.max(image) < 255:
+            image = 257 * image
+        peaks, _ = find_peaks(image.flatten(), height=7 * 257)
+        row, col = divmod(peaks, image.shape[0])
+        save = image[row, col]
+        image = image.astype(np.uint16)
+        image[row, col] = np.iinfo(np.uint16).max
+        if feature_detector == "ORB":
+            detector = cv2.ORB_create()
+        elif feature_detector == "SIFT":
+            detector = cv2.SIFT_create()
+        else:
+            detector = cv2.AKAZE_create()
+        keypoints, descriptors = detector.detectAndCompute(downsample(image), None)
+        image[row, col] = save
     except rawpy.LibRawError:
         print("Error occured. Image not loaded.")
     else:
@@ -274,7 +324,7 @@ def display(
     None
     """
     fig, ax = plt.subplots()
-    ax.imshow(downsample(image))
+    ax.imshow(downsample(image), cmap=(None if len(image.shape) == 3 else "gray"))
     plt.style.use("dark_background")
     plt.title((filename.replace("_", " ") if filename else ""))
     plt.axis("off")
@@ -338,10 +388,14 @@ def register(
     for i, feature in enumerate(features):
         for j, match in enumerate(matches):
             points[i, j, :] = feature[match.trainIdx if i else match.queryIdx].pt
-
-    homography, mask = cv2.findHomography(points[0], points[1], cv2.RANSAC)
-    image = cv2.warpPerspective(image, homography, (image.shape[1], image.shape[0]))
-
+    try:
+        homography, mask = cv2.findHomography(points[0], points[1], cv2.RANSAC)
+        image = cv2.warpPerspective(image, homography, (image.shape[1], image.shape[0]))
+    except cv2.error:
+        dx = int(base_keypoints[0].pt[0] - keypoints[0].pt[0])
+        dy = int(base_keypoints[0].pt[1] - keypoints[0].pt[1])
+        image = np.roll(image, dx, axis=1)
+        image = np.roll(image, dy, axis=0)
     return image
 
 
@@ -351,6 +405,7 @@ def stack(
     filename: Optional[str] = None,
     save: bool = False,
     quiet: bool = False,
+    black_and_white: bool = False,
 ) -> np.ndarray:
     """Stacks astrophotography images.
 
@@ -383,6 +438,7 @@ def stack(
                 master_dark=master_dark,
                 master_flat=master_flat,
                 feature_detector=feature_detector,
+                black_and_white=black_and_white,
             )
             if image is not None:
                 if image_stack is None:
@@ -405,8 +461,94 @@ def stack(
                 image_stack, axis=0
             )  # sigmaclip(np.sum(image_stack, axis=0), 5, 5)[0]
             display(stacked_image, filename=filename, save=save)
+            print(image_stack.shape)
+            return stacked_image
     except rawpy.LibRawError:
         print("Failed to created stacked image.")
     else:
-        return stacked_image
+        pass
     return None
+
+
+if __name__ == "__main__":
+    parser = argparse.ArgumentParser(
+        description="Astrosight. A astrophotography image processing software."
+    )
+    parser.add_argument(
+        "-q", "--quiet", action="store_true", help="Hides text printed to the terminal."
+    )
+    parser.add_argument(
+        "--feature-detector",
+        choices=["ORB", "SIFT", "AKAZE"],
+        default="ORB",
+        help="Feature detector to locate stars in image",
+    )
+    parser.add_argument(
+        "-f",
+        "--filename",
+        default="stacked_image",
+        help="Filename for final, stacked image.",
+    )
+    parser.add_argument(
+        "-s",
+        "--save",
+        action="store_true",
+        help="Automatically saves final, stacked image.",
+    )
+    parser.add_argument(
+        "-",
+        "--bw",
+        action="store_true",
+        help="Stacks in black and white mode.",
+    )
+    arguments = parser.parse_args()
+
+    def select_files() -> list[str]:
+        dialog = QFileDialog()
+        dialog.setDirectory(".")
+        dialog.setFileMode(QFileDialog.FileMode.ExistingFiles)
+        dialog.setNameFilter(
+            "Image files (*.NEF *.ARW *.SRF *.SR2 *.MEF *.ORF *.SRW *.ERF *.KDC *.DCS \
+                          *.RW2 *.RAF *.DCR *.DNG *.PEF *.CRW *.CHDK *.IIQ *.3FR *.NRW \
+                          *.NEF *.MOS *.CR2 *.ARI)"
+        )
+        dialog.setViewMode(QFileDialog.ViewMode.List)
+        if dialog.exec():
+            filenames = dialog.selectedFiles()
+            return filenames
+
+    file_tree = {}
+    print("Please select core images")
+
+    print("Selecting light frames...")
+    file_tree["Light"] = select_files()
+    print("Selecting bias frames...")
+    file_tree["Bias"] = select_files()
+    print("Selecting dark frames...")
+    file_tree["Dark"] = select_files()
+    print("Selecting flat frames...")
+    file_tree["Flat"] = select_files()
+    print("Selecting dark flat frames...")
+    file_tree["Dark Flat"] = select_files()
+    # file_tree["Light"] = glob.glob("./sample_data/Light/*")
+    # file_tree["Bias"] = glob.glob("./sample_data/Bias/*")
+    # file_tree["Dark"] = glob.glob("./sample_data/Dark/*")
+    # file_tree["Flat"] = glob.glob("./sample_data/Flat/*")
+    # file_tree["Dark Flat"] = glob.glob("./sample_data/Dark\ Flat/*")
+    if not arguments.quiet:
+        print(f"{len(file_tree['Light'])} light frames selected")
+        print(f"{len(file_tree['Bias'])} bias frames selected")
+        print(f"{len(file_tree['Dark'])} dark frames selected")
+        print(f"{len(file_tree['Flat'])} flat frames selected")
+        print(f"{len(file_tree['Dark Flat'])} dark flat frames selected")
+        # print("Current image tree")
+        # show_tree(files)
+
+    _ = stack(
+        file_tree=file_tree,
+        feature_detector=arguments.feature_detector,
+        filename=arguments.filename,
+        save=arguments.save,
+        quiet=arguments.quiet,
+        black_and_white=arguments.bw,
+    )
