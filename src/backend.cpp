@@ -1,7 +1,7 @@
 #include <libraw/libraw.h>
 
 #include <opencv2/highgui.hpp>
-export module core;
+export module backend;
 
 export namespace astrosight {
 cv::Mat load(string file) {

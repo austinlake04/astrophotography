@@ -1,41 +1,7 @@
-// import QtQuick 2.15
-// import QtQuick.Controls 2.15
-
-// ApplicationWindow {
-//     visible: true
-//     width: 400
-//     height: 600
-//     title: "Clock"
-
-//     Rectangle {
-//         anchors.fill: parent
-
-//         Image {
-//             anchors.fill: parent
-//             source: "./images/background.png"
-//             fillMode: Image.PreserveAspectCrop
-//         }
-
-//         Rectangle {
-//             anchors.fill: parent
-//             color: "transparent"
-
-//             Text {
-//                 text: "16:38:33"
-//                 font.pixelSize: 24
-//                 color: "white"
-//             }
-
-//         }
-
-//     }
-
-// }
-
-import QtQuick 2.12
-import QtQuick.Window 2.12
-import QtQuick.Dialogs 1.3
-import QtQuick.Controls 1.4
+import QtQuick 6.6.1
+import QtQuick.Window 6.6.1
+import QtQuick.Dialogs 6.6.1
+import QtQuick.Controls 6.6.1
 import QtQml.Models 2.2
 
 
@@ -56,18 +22,11 @@ ApplicationWindow {
                 text: qsTr("Exit Astrosight")
                 onTriggered: Qt.quit();
             }
+			MenuItem {
+				text: qsTr("Hide Astrosight")
+			}
         }
-        Menu {
-            title: qsTr("File")
-            MenuItem {
-                text: qsTr("Select Image Stack")
-                onTriggered: fileDialog.open()
-            }
-            MenuItem {
-                text: qsTr("Redo")
-                onTriggered: Qt.quit();
-            }
-        }
+
         Menu {
             title: qsTr("File")
             MenuItem {
@@ -144,31 +103,3 @@ ApplicationWindow {
 
     Component.onCompleted: fileManagement.test()
 }
-
-// Window {
-//         id: mainWindow
-//         visible: true
-
-//         width: 700
-//         height: 500
-
-//         // FileDialog
-//         FileDialog {
-//             id: fileDialog
-//             title: "Please choose a file"
-//             folder: shortcuts.home
-//             selectMultiple: true
-//             nameFilters: [
-//                 "Image files (*.NEF *.ARW *.SRF *.SR2 *.MEF *.ORF *.SRW *.ERF *.KDC *.DCS *.RW2 *.RAF *.DCR *.DNG *.PEF *.CRW *.CHDK *.IIQ *.3FR *.NRW *.NEF *.MOS *.CR2 *.ARI)",
-//             ]
-//             onAccepted: {
-//                 console.log("You chose: " + fileDialog.fileUrls)
-//                 //acceptDialog();
-//             }
-//             onRejected: {
-//                 console.log("rejected")
-//                 //rejectDialog();
-//             }
-//             Component.onCompleted: visible = true
-//         }
-// }
