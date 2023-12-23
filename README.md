@@ -12,7 +12,7 @@ Image processing application for astrophotography.
 
 ## Build
 
-To clone the repository on your local machine, please run the following git command in the terminal:
+To clone the repository on your local machine, please run the following git command in the terminal
 `git clone https://github.com/austinlucaslake/astrosight.git`
 
 Assuming [Conan][conan-url] is installed, you may build and run this project as follows:
