@@ -1,10 +1,10 @@
 #include <QGuiApplication>
-#include <QQuickView>
+#include <QQmlApplicationEngine>
 #include <QUrl>
 
 int main(int argc, char *argv[]) {
-    QGuiApplication app(argc, argv);
-    QQuickView view(QUrl::fromLocalFile("main.qml"));
-	view.show()
+	QGuiApplication app(argc, argv);
+	QQmlApplicationEngine engine;
+	engine.load(QUrl::fromLocalFile("main.qml"));
 	return app.exec();
 }

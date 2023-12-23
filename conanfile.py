@@ -3,7 +3,7 @@ from conan.tools.cmake import CMake, CMakeToolchain, CMakeDeps, cmake_layout
 
 required_conan_version = ">=2.0"
 
-class Astrosight(ConanFile):
+class Recipe(ConanFile):
     name = "astrosight"
     version = "0.1.0"
     license = "Apache-2.0"
@@ -13,12 +13,15 @@ class Astrosight(ConanFile):
     topics = ("astrophotography", "image processing")
     settings = "arch", "compiler", "build_type", "os"
     exports_sources = "CMakeLists.txt", "src/*", "include/*"
+   
+    def configure(self):
+        self.options["qt"].qtdeclarative = True
+        self.options["qt"].gui = True
 
     def requirements(self):
-        self.requires("argparse/3.0")
         self.requires("libraw/0.21.1")
         self.requires("opencv/4.8.1")
-        self.requires("qt/6.6.0")
+        self.requires("qt/5.15.11")
         self.requires("freetype/2.13.2", override=True)
         
     def build_requirements(self):

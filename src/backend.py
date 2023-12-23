@@ -17,22 +17,6 @@ from scipy.signal import find_peaks
 from tqdm import tqdm
 
 
-def downsample(image: np.ndarray) -> np.ndarray:
-    """Scales image down to 8-bit.
-
-    Parameters
-    ----------
-    image : numpy.ndarray
-        16-bit image
-
-    Returns
-    -------
-    scaled_image : numpy.array
-        8-bit image"""
-    scaled_image = (image / 257).astype(np.uint8)
-    return scaled_image
-
-
 def preview(raw_file: str) -> np.ndarray:
     """Loads preview of RAW image.
 
