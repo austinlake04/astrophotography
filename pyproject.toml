@@ -3,14 +3,19 @@ requires = ["pdm-backend"]
 build-backend = "pdm.backend"
 
 [project]
-name = "Astrosight"
+name = "astrosight"
 version = "0.1.0"
 dependencies = [
-  "opencv",
-  "rawpy",
-  "pyqt6",
+	"astropy",
+	"matplotlib",
+	"numpy",
+	"opencv-python",
+	"PySide6",
+	"rawpy",
+	"scipy",
+	"tqdm"
 ]
-requires-python = ">=3.8"
+requires-python = ">=3.8,<3.12"
 authors = [
 	{name = "Austin Lucas Lake", email = "53884490+austinlucaslake@users.noreply.github.com"}
 ]
@@ -20,7 +25,7 @@ maintainers = [
 description = "Image processing application for astrophotography."
 readme = "README.md"
 license = { file = "LICENSE" }
-keywords = ["image processing", "astrophotography"]
+keywords = ["image processing", "application", "astrophotography"]
 classifiers = [
   "Development Status :: 3 - Alpha",
 
@@ -36,9 +41,16 @@ classifiers = [
   "Programming Language :: Python :: 3.12",
 ]
 
+[project.optional-dependencies]
+dev = [
+	"pyinstaller",
+	"pytest",
+	"ruff"
+]
+
 [project.urls]
 Repository = "https://github.com/austinlucaslake/astrosight.git"
 Issues = "https://github.com/austinlucaslake/astrosight/issues"
 
-[project.scripts]
-astrosight = "astrosight:main"
+[project.gui-scripts]
+astrosight = "astrosight.gui:main"
