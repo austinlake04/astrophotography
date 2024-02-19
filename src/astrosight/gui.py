@@ -7,9 +7,6 @@ import glob
 class Engine(QQmlApplicationEngine):
     def __init__(self):
         super().__init__()
-    
-    def reload(self, qml: str):
-        self.load(qml)
 
     @Slot(None, result=None)
     def reload(self) -> None:
