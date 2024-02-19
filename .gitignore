@@ -5,3 +5,4 @@ main.plist
 src/test_data/
 src/sample_data/
 .pdm-python
+__pycache__/
