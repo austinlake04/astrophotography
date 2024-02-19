@@ -11,13 +11,15 @@ import matplotlib.pyplot as plt
 import numpy as np
 import rawpy
 from astropy.io import fits
-from PyQt5.QtGui import QGuiApplication
-from PyQt5.QtWidgets import QFileDialog
+from PySide6.QtGui import QGuiApplication
+from PySide6.QtWidgets import QFileDialog
 from scipy.signal import find_peaks
 from tqdm import tqdm
 
 
-def preview(raw_file: str) -> np.ndarray:
+def preview(
+    raw_file: str
+) -> np.ndarray:
     """Loads preview of RAW image.
 
     Parameters
@@ -37,7 +39,8 @@ def preview(raw_file: str) -> np.ndarray:
 
 
 def master_calibration(
-    file_tree: dict[list[str]], quiet: bool = False
+    file_tree: dict[list[str]],
+    quiet: bool = False
 ) -> tuple[Optional[np.ndarray], Optional[np.ndarray]]:
     """Generates calibration frame from a specified image set.
 
@@ -180,7 +183,6 @@ def load(
     master_dark: Optional[np.ndarray] = None,
     master_flat: Optional[np.ndarray] = None,
     feature_detector: str = "ORB",
-    black_and_white: bool = False,
 ) -> tuple[Optional[np.ndarray], Optional[tuple[cv2.KeyPoint]], Optional[np.ndarray]]:
     """Loads and processes an astrophotography image at a specified file path.
 
@@ -219,26 +221,25 @@ def load(
             with rawpy.imread(raw_file) as raw:
                 image = raw.raw_image
                 image = calibrate(image, master_dark, master_flat)
-                if not black_and_white:
-                    np.copyto(raw.raw_image, image)
-                    params = rawpy.Params(
-                        gamma=(1, 1),
-                        no_auto_scale=False,
-                        no_auto_bright=True,
-                        output_bps=16,
-                        use_camera_wb=True,
-                        use_auto_wb=False,
-                        user_wb=None,
-                        output_color=rawpy.ColorSpace.sRGB,
-                        demosaic_algorithm=rawpy.DemosaicAlgorithm.AHD,
-                        fbdd_noise_reduction=rawpy.FBDDNoiseReductionMode.Full,
-                        dcb_enhance=False,
-                        dcb_iterations=0,
-                        half_size=False,
-                        median_filter_passes=0,
-                        user_black=0,
-                    )
-                    image = raw.postprocess(params)
+                np.copyto(raw.raw_image, image)
+                params = rawpy.Params(
+                    gamma=(1, 1),
+                    no_auto_scale=False,
+                    no_auto_bright=True,
+                    output_bps=16,
+                    use_camera_wb=True,
+                    use_auto_wb=False,
+                    user_wb=None,
+                    output_color=rawpy.ColorSpace.sRGB,
+                    demosaic_algorithm=rawpy.DemosaicAlgorithm.AHD,
+                    fbdd_noise_reduction=rawpy.FBDDNoiseReductionMode.Full,
+                    dcb_enhance=False,
+                    dcb_iterations=0,
+                    half_size=False,
+                    median_filter_passes=0,
+                    user_black=0,
+                )
+                image = raw.postprocess(params)
         if np.max(image) < 255:
             image = 257 * image
         peaks, _ = find_peaks(image.flatten(), height=7 * 257)
@@ -293,7 +294,9 @@ def calibrate(
 
 
 def display(
-    image: np.ndarray, filename: Optional[str] = None, save: bool = False
+    image: np.ndarray,
+    filename: Optional[str] = None,
+    save: bool = False
 ) -> None:
     """Displays an image.
 
@@ -392,7 +395,6 @@ def stack(
     filename: Optional[str] = None,
     save: bool = False,
     quiet: bool = False,
-    black_and_white: bool = False,
 ) -> np.ndarray:
     """Stacks astrophotography images.
 
@@ -425,7 +427,6 @@ def stack(
                 master_dark=master_dark,
                 master_flat=master_flat,
                 feature_detector=feature_detector,
-                black_and_white=black_and_white,
             )
             if image is not None:
                 if image_stack is None:
@@ -481,12 +482,6 @@ if __name__ == "__main__":
         "--save",
         action="store_true",
         help="Automatically saves final, stacked image.",
-    )
-    parser.add_argument(
-        "-",
-        "--bw",
-        action="store_true",
-        help="Stacks in black and white mode.",
     )
     arguments = parser.parse_args()
 
