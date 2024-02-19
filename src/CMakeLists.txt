@@ -1,33 +1,31 @@
+project(astrosight)
 cmake_minimum_required(VERSION 3.23.5 FATAL_ERROR)
 
 find_package(${META_PROJECT_NAME} REQUIRED HINTS "${CMAKE_CURRENT_SOURCE_DIR}/../")
 
 set(target gui)
 set(sources
-	main.qml
-	gui.cpp
+    qml.qrc 
+    gui.cpp
 )
 
-find_package(Qt5 REQUIRED)
-find_package(OpenCV REQUIRED)
-include_directories(${Qt5_INCLUDE_DIR})
-include_directories(${OpenCV_INCLUDE_DIR})
+find_package(Qt6 REQUIRED COMPONENTS Qt6::Core Qt6::Gui Qt6::Qml)
 
-add_executable(${target}
-	${sources}
+qt_add_executable(${target}
+    ${sources}
 )
 
-target_link_libraries(${target} ${OpenCV_LIBS})
-target_link_libraries(${target} Qt5::Core)
-target_link_libraries(${target} Qt5::Gui)
-target_link_libraries(${target} Qt5::Qml)
+target_link_libraries(${target} PRIVATE Qt6::Core Qt6::Gui Qt6::Qml)
+# target_link_libraries(${target} Qt6::Core)
+# target_link_libraries(${target} Qt6::Gui)
+# target_link_libraries(${target} Qt6::Qml)
 
 qt_import_plugins(${target}
-    INCLUDE Qt5::QCocoaIntegrationPlugin
+    INCLUDE Qt6::QCocoaIntegrationPlugin
 )
 
 set(DEFULAT_COMPILE_OPTIONS
-	-Wall -Wextra -Wpedantic
+    -Wall -Wextra -Wpedantic
 )
 target_compile_options(${target}
     PRIVATE
@@ -35,7 +33,7 @@ target_compile_options(${target}
 )
 
 set(DEBUG_COMPILE_OPTIONS
-    -O0
+    -O0 -Werror
 )
 target_compile_options(${target}
     PRIVATE
@@ -43,7 +41,7 @@ target_compile_options(${target}
 )
 
 set(DEBUG_COMPILE_OPTIONS
-    -O3 -Werror
+    -O3 -Wno-dev
 )
 target_compile_options(${target}
     PRIVATE
