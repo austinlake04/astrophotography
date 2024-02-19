@@ -3,6 +3,7 @@ from PySide6.QtCore import QObject, Slot
 from PySide6.QtGui import QGuiApplication
 from PySide6.QtQml import QQmlApplicationEngine
 import glob
+from backend import Backend
 
 class Engine(QQmlApplicationEngine):
     def __init__(self):
@@ -17,7 +18,9 @@ class Engine(QQmlApplicationEngine):
 def main() -> None:
     app = QGuiApplication(sys.argv)
     engine = Engine()
-    engine.rootContext().setContextProperty("Engine", engine);
+    engine.rootContext().setContextProperty("Engine", engine)
+    backend = Backend()
+    engine.rootContext().setContextProperty("Backend", backend)
     qml = glob.glob("**/main.qml", recursive=True)[0]
     engine.load(qml)
     if not engine.rootObjects():
