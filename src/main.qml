@@ -107,6 +107,7 @@ ApplicationWindow {
 		visible: true
 		spacing: 10
 
+/*
 		TreeView {
 			// based on QtQuick TreeView example
 			// (https://doc.qt.io/qt-6/qml-qtquick-treeview.html)
@@ -115,6 +116,7 @@ ApplicationWindow {
 			id: treeView
 			visible: true
 			model: Model
+			selectionModel: ItemSelectionModel {}
 
 			delegate: Item {
 				implicitWidth: padding + label.x + label.implicitWidth + padding
@@ -177,6 +179,8 @@ ApplicationWindow {
 				}
 			}
 		}
+*/
+
 
 		Image {
 			id: preview
