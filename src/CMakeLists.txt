@@ -1,49 +1,36 @@
 project(astrosight)
-cmake_minimum_required(VERSION 3.23.5 FATAL_ERROR)
+cmake_minimum_required(VERSION 3.28 FATAL_ERROR)
 
 find_package(${META_PROJECT_NAME} REQUIRED HINTS "${CMAKE_CURRENT_SOURCE_DIR}/../")
 
 set(target gui)
 set(sources
-    qml.qrc 
+    main.qml
+	backend.cpp
     gui.cpp
 )
 
-find_package(Qt6 REQUIRED COMPONENTS Qt6::Core Qt6::Gui Qt6::Qml)
+
+find_package(libraw REQUIRED)
+find_package(OpenCV REQUIRED)
+find_package(Qt6 REQUIRED COMPONENTS Qt6::Core Qt6::Gui Qt6::Qml Qt6::Quick)
+
+include_directories(
+	${libraw_INCLUDE_DIRS}
+	${OpenCV_INCLUDE_DIRS}
+	${Qt6_INCLUDE_DIRS}
+	${Qt6Core_INCLUDE_DIRS}
+	${Qt6Gui_INCLUDE_DIRS}
+	${Qt6Qml_INCLUDE_DIRS}
+	${Qt6Quick_INCLUDE_DIRS}
+)
 
 qt_add_executable(${target}
     ${sources}
 )
 
-target_link_libraries(${target} PRIVATE Qt6::Core Qt6::Gui Qt6::Qml)
-# target_link_libraries(${target} Qt6::Core)
-# target_link_libraries(${target} Qt6::Gui)
-# target_link_libraries(${target} Qt6::Qml)
+target_link_libraries(${target} PRIVATE Qt6::Core Qt6::Gui Qt6::Qml Qt6::Quick libraw::libraw)
 
 qt_import_plugins(${target}
     INCLUDE Qt6::QCocoaIntegrationPlugin
-)
-
-set(DEFULAT_COMPILE_OPTIONS
-    -Wall -Wextra -Wpedantic
-)
-target_compile_options(${target}
-    PRIVATE
-    ${DEFAULT_COMPILE_OPTIONS}
-)
-
-set(DEBUG_COMPILE_OPTIONS
-    -O0 -Werror
-)
-target_compile_options(${target}
-    PRIVATE
-    "$<$<CONFIG:DEBUG>:${DEBUG_COMPILE_OPTIONS}>"
-)
-
-set(DEBUG_COMPILE_OPTIONS
-    -O3 -Wno-dev
-)
-target_compile_options(${target}
-    PRIVATE
-    "$<$<CONFIG:RELEASE>:${RELEASE_COMPILE_OPTIONS}>"
 )

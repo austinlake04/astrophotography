@@ -15,10 +15,10 @@ class Recipe(ConanFile):
     exports_sources = "CMakeLists.txt", "src/*", "include/*"
    
     def configure(self):
-        self.options["qt"].qtdeclarative = True
-        self.options["qt"].gui = True
+        self.options["qt"].qtquick3d = True
 
     def requirements(self):
+        self.requires("ccfits/2.6")
         self.requires("libraw/0.21.1")
         self.requires("opencv/4.8.1")
         self.requires("qt/6.3.2")
@@ -26,7 +26,7 @@ class Recipe(ConanFile):
         self.requires("libpng/1.6.42", override=True)
         
     def build_requirements(self):
-        self.tool_requires("cmake/[>3.23.5]")
+        self.tool_requires("cmake/[>3.28]")
         self.test_requires("cppcheck/2.12.1")
         self.test_requires("uncrustify/0.78.0")
 
