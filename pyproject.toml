@@ -7,6 +7,7 @@ name = "astrosight"
 version = "0.1.0"
 dependencies = [
 	"astropy",
+	"imageio",
 	"matplotlib",
 	"numpy",
 	"opencv-python",
@@ -15,12 +16,12 @@ dependencies = [
 	"scipy",
 	"tqdm"
 ]
-requires-python = ">=3.8,<3.12"
+requires-python = ">=3.8,<=3.12"
 authors = [
-	{name = "Austin Lucas Lake", email = "53884490+austinlucaslake@users.noreply.github.com"}
+	{ name = "Austin Lucas Lake", email = "53884490+austinlucaslake@users.noreply.github.com"}
 ]
 maintainers = [
-	{name = "Austin Lucas Lake", email = "53884490+austinlucaslake@users.noreply.github.com"}
+	{ name = "Austin Lucas Lake", email = "53884490+austinlucaslake@users.noreply.github.com"}
 ]
 description = "Image processing application for astrophotography."
 readme = "README.md"
@@ -41,16 +42,21 @@ classifiers = [
   "Programming Language :: Python :: 3.12",
 ]
 
-[project.optional-dependencies]
-dev = [
-	"pyinstaller",
-	"pytest",
-	"ruff"
-]
-
 [project.urls]
 Repository = "https://github.com/austinlucaslake/astrosight.git"
 Issues = "https://github.com/austinlucaslake/astrosight/issues"
 
 [project.gui-scripts]
 astrosight = "astrosight.gui:main"
+
+[tool.pdm.dev-dependencies]
+dev = [
+    "multiprocess",
+    "gitpython",
+	"ipykernel",
+    "ipywidgets",
+    "pip",
+    "pyinstaller",
+	"pytest",
+	"ruff"
+]
