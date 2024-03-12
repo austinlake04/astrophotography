@@ -3,29 +3,74 @@
 import argparse
 import os
 import sys
-from tkinter import filedialog as fd
 from typing import Optional
-
+import glob
 import cv2
 import matplotlib.pyplot as plt
 import numpy as np
 import rawpy
 from astropy.io import fits
-from PySide6.QtGui import QGuiApplication
+from astropy.utils.data import get_pkg_data_filename
+from PySide6.QtCore import Slot, QObject, QSize
+from PySide6.QtQuick import QQuickImageProvider
+from PySide6.QtGui import QGuiApplication, QImage, QPixmap, QColor
 from PySide6.QtWidgets import QFileDialog
 from scipy.signal import find_peaks
 from tqdm import tqdm
+import imageio
 
-class Backend:
+from astrosight.tree import TreeModel
+
+
+class Backend(QQuickImageProvider):
     def __init__(self):
-        self.images = {
-            "Light" = [],
-            "Bias" = [],
-            "Dark" = [],
-            "Flat" = [],
-            "Dark Falt" = []
-        }
-        self.params = None
+        super().__init__(QQuickImageProvider.Image)
+
+        header = ["Folder", "Index", "File"]
+        self.images = { "Selected Image Files": {
+            "Light": dict(enumerate(glob.glob("M31Andromeda/*.FITS"))),
+            "Dark": {},
+            "Flat": {},
+            "Dark Flat": {},
+            "Bias": {}
+        }}
+
+        self.toggle = True
+        self.model = TreeModel(header, self.images)
+
+    def resample(self, image: np.ndarray, dtype: type) -> np.ndarray:
+        image = ((image - image.min()/image.max()) * np.iinfo(dtype).max).astype(dtype)
+        return image
+
+    def requestImage(self, id: str, size: QSize, requestedSize: QSize) -> QImage:
+        files = glob.glob("M31Andromeda/*.FITS")
+        assert len(files) > int(id)
+        file = os.path.abspath(files[int(id)])
+        print(file)
+        assert os.path.isfile(file), "RAW file doesn't exist."
+        if file[-5:] in [".fits", ".FITS"] or \
+            file[-4:] in [".fit", ".FIT"]:
+            #fits.info(file)
+            raw_image = fits.getdata(file, ext=0)
+        elif file[-5:] in [".tiff", ".jpeg"] or \
+            file[-4:] in [".tif", ".tif", ".png"]:
+            raw_image = imageio.imread(file)
+        else:
+            try:
+                with rawpy.imread(file) as raw:
+                    raw_image = raw.raw_image
+            except rawpy.LibRawError:
+                print("Invalid file format.")
+                return None
+        #raw_image = self.resample(raw_image, dtype=np.uint16)
+        print(raw_image.shape)
+        print(raw_image.dtype)
+        h, w = raw_image.shape[:2]
+        bytes_per_line = w * \
+            (2 if raw_image.dtype == np.uint16 else 1) * \
+            (raw_image.shape[2] if len(raw_image.shape) > 2 else 1)
+        fmt = QImage.Format_Grayscale16 if raw_image.dtype == np.uint16 else QImage.Format_Grayscale8
+        return QImage(raw_image.data, w, h, bytes_per_line, fmt)
 
     def set_params(
         demosaic_algorithm=None,
@@ -33,12 +78,13 @@ class Backend:
         four_color_rgb=False,
         dcb_iterations=0,
         dcb_enhance=False,
-        fbdd_noise_reduction=FBDDNoiseReductionMode.Off,
+        fbdd_noise_reduction=rawpy.FBDDNoiseReductionMode.Off,
         noise_thr=None,
         median_filter_passes=0,
-        use_camera_wb=False, use_auto_wb=False,
+        use_camera_wb=False,
+        use_auto_wb=False,
         user_wb=None,
-        output_color=ColorSpace.sRGB,
+        output_color=rawpy.ColorSpace.sRGB,
         output_bps=8,
         user_flip=None,
         user_black=None,
@@ -47,7 +93,7 @@ class Backend:
         auto_bright_thr=None,
         adjust_maximum_thr=0.75,
         bright=1.0,
-        highlight_mode=HighlightMode.Clip,
+        highlight_mode=rawpy.HighlightMode.Clip,
         exp_shift=None,
         exp_preserve_highlights=0.0,
         no_auto_scale=False,
@@ -61,12 +107,13 @@ class Backend:
             four_color_rgb=False,
             dcb_iterations=0,
             dcb_enhance=False,
-            fbdd_noise_reduction=FBDDNoiseReductionMode.Off,
+            fbdd_noise_reduction=rawpy.FBDDNoiseReductionMode.Off,
             noise_thr=None,
             median_filter_passes=0,
-            use_camera_wb=False, use_auto_wb=False,
+            use_camera_wb=False,
+            use_auto_wb=False,
             user_wb=None,
-            output_color=ColorSpace.sRGB,
+            output_color=rawpy.ColorSpace.sRGB,
             output_bps=8,
             user_flip=None,
             user_black=None,
@@ -75,7 +122,7 @@ class Backend:
             auto_bright_thr=None,
             adjust_maximum_thr=0.75,
             bright=1.0,
-            highlight_mode=HighlightMode.Clip,
+            highlight_mode=rawpy.HighlightMode.Clip,
             exp_shift=None,
             exp_preserve_highlights=0.0,
             no_auto_scale=False,
@@ -103,6 +150,8 @@ class Backend:
         assert os.path.isfile(raw_file), "RAW file doesn't exist."
         with rawpy.imread(raw_file) as raw:
             raw_image = raw.raw_image
+            w, h, c = raw_image.shape
+            raw_image = QImage(raw_image, w, h, 3*w, QImage.Format.Format_RGB888)
         return raw_image
 
 
@@ -251,8 +300,8 @@ class Backend:
         return master_dark, master_flat
 
 
-    def load_image(
-        self
+    def load(
+        self,
         raw_file: str,
         master_dark: Optional[np.ndarray] = None,
         master_flat: Optional[np.ndarray] = None,
@@ -319,7 +368,7 @@ class Backend:
         return None, None, None
 
 
-    def calibrate_image(
+    def calibrate(
         image: np.ndarray,
         master_dark: Optional[np.ndarray] = None,
         master_flat: Optional[np.ndarray] = None,
@@ -350,7 +399,7 @@ class Backend:
         return image
 
 
-    def display_image(
+    def display(
         image: np.ndarray,
         filename: Optional[str] = None,
         save: bool = False
@@ -381,7 +430,7 @@ class Backend:
         plt.close(fig)
 
 
-    def register_image(
+    def register(
         image: np.ndarray,
         features: tuple[tuple[cv2.KeyPoint], np.ndarray],
         base_features: tuple[tuple[cv2.KeyPoint], np.ndarray],

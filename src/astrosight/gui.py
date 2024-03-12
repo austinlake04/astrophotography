@@ -3,24 +3,15 @@ from PySide6.QtCore import QObject, Slot
 from PySide6.QtGui import QGuiApplication
 from PySide6.QtQml import QQmlApplicationEngine
 import glob
-from backend import Backend
+from astrosight.backend import Backend
+import numpy as np
 
-class Engine(QQmlApplicationEngine):
-    def __init__(self):
-        super().__init__()
-
-    @Slot(None, result=None)
-    def reload(self) -> None:
-        self.clearComponentCache()
-        qml = glob.glob("**/main.qml", recursive=True)[0]
-        self.load(qml)
-        
 def main() -> None:
     app = QGuiApplication(sys.argv)
-    engine = Engine()
-    engine.rootContext().setContextProperty("Engine", engine)
+    engine = QQmlApplicationEngine()
     backend = Backend()
-    engine.rootContext().setContextProperty("Backend", backend)
+    engine.addImageProvider("preview", backend)
+    engine.rootContext().setContextProperty("Model", backend.model)
     qml = glob.glob("**/main.qml", recursive=True)[0]
     engine.load(qml)
     if not engine.rootObjects():
