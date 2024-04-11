@@ -6,14 +6,21 @@ find_package(${META_PROJECT_NAME} REQUIRED HINTS "${CMAKE_CURRENT_SOURCE_DIR}/..
 set(target gui)
 set(sources
     main.qml
-	backend.cpp
+    backend.cpp
     gui.cpp
 )
 
-
+find_package(ccfits REQUIRED)
 find_package(libraw REQUIRED)
 find_package(OpenCV REQUIRED)
-find_package(Qt6 REQUIRED COMPONENTS Qt6::Core Qt6::Gui Qt6::Qml Qt6::Quick)
+
+set(Qt_LIBS
+    Qt6::Core
+    Qt6::Gui
+    Qt6::Qml
+    Qt6::Quick
+)
+find_package(Qt6 REQUIRED COMPONENTS ${Qt_LIBS})
 
 include_directories(
 	${libraw_INCLUDE_DIRS}
@@ -25,12 +32,8 @@ include_directories(
 	${Qt6Quick_INCLUDE_DIRS}
 )
 
-qt_add_executable(${target}
+add_executable(${target}
     ${sources}
 )
 
-target_link_libraries(${target} PRIVATE Qt6::Core Qt6::Gui Qt6::Qml Qt6::Quick libraw::libraw)
-
-qt_import_plugins(${target}
-    INCLUDE Qt6::QCocoaIntegrationPlugin
-)
+target_link_libraries(${target} ccfits::ccfits libraw::libraw ${OpenCV_LIBS} ${Qt_LIBS})

@@ -1,8 +1,8 @@
 [settings]
-os=Macos
+os=Linux
 arch=x86_64
-compiler=apple-clang
+compiler=gcc
 compiler.version=13
-compiler.libcxx=libc++
+compiler.libcxx=libstdc++
 compiler.cppstd=20
 build_type=Release
