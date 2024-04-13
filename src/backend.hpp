@@ -21,10 +21,6 @@
 
 namespace astrosight {
 
-QImage create_qimage(const astrosight::image& frame, const bool thumbnail);
-
-void display_frame(const astrosight::image& frame);
-
 typedef enum image_type_t {
     light = 0,
     dark = 1,
@@ -47,17 +43,21 @@ typedef struct image_t {
     bool stacked = false;
     bool calibrated = false;
     bool registered = false;
-    std::optional<std::size_t> star_count;
 } image;
+
+QImage create_qimage(const astrosight::image& frame, const bool thumbnail);
+
+void display_frame(const astrosight::image& frame);
 
 class Backend : public QQuickImageProvider {
 public:
-	Backend();
+	Backend() : QQuickImageProvider(QQuickImageProvider::Image) {};
+
 	QImage requestImage(
         const QString &id,
         QSize *size,
         const QSize &requestedSize
-    );
+    ) override;
 
     void select_files(std::string pattern);
 
@@ -84,7 +84,7 @@ private:
     std::optional<astrosight::image> master_dark_flat_frame;
     std::optional<astrosight::image> master_bias_frame;
     int reference_index;
-    astrosight::image& preview;
+    astrosight::image const * preview;
     cv::Ptr<cv::Feature2D> detector = cv::ORB::create();
     cv::Ptr<cv::DescriptorMatcher> matcher = cv::BFMatcher::create(cv::NORM_HAMMING, true);
 };

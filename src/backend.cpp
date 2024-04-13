@@ -1,6 +1,9 @@
 #include "backend.hpp"
 
-QImage astrosight::create_qimage(const astrosight::image& frame, const bool thumbnail) {
+QImage astrosight::create_qimage(
+    const astrosight::image& frame,
+    const bool thumbnail
+) {
     QImage::Format format;
     switch (frame.matrix.type()) {
         case CV_16UC1:
@@ -47,7 +50,9 @@ void astrosight::display_frame(
     cv::destroyAllWindows();
 }
 
-void astrosight::Backend::select_files(const std::string pattern) {
+void astrosight::Backend::select_files(
+    const std::string pattern
+) {
     glob_t globbuf;
     int err = glob(pattern.c_str(), 0, NULL, &globbuf);
     if(err == 0)
@@ -225,6 +230,8 @@ void astrosight::Backend::generate_master_frames() {
     }
 }
 
-void astrosight::Backend::set_preview(const astrosight::image& frame) {
-    this->preview = frame;
+void astrosight::Backend::set_preview(
+    const astrosight::image& frame
+) {
+    this->preview = &frame;
 }
