@@ -18,6 +18,7 @@ class Recipe(ConanFile):
         self.options["qt"].qtquick3d = True
 
     def requirements(self):
+        self.requires("argparse/3.0")
         self.requires("ccfits/2.6")
         self.requires("libraw/0.21.1")
         self.requires("opencv/4.8.1")
