@@ -10,6 +10,7 @@ set(sources
     gui.cpp
 )
 
+find_package(argparse REQUIRED)
 find_package(ccfits REQUIRED)
 find_package(libraw REQUIRED)
 find_package(OpenCV REQUIRED)
@@ -36,4 +37,4 @@ add_executable(${target}
     ${sources}
 )
 
-target_link_libraries(${target} ccfits::ccfits libraw::libraw ${OpenCV_LIBS} ${Qt_LIBS})
+target_link_libraries(${target} argparse::argparse ccfits::ccfits libraw::libraw ${OpenCV_LIBS} ${Qt_LIBS})

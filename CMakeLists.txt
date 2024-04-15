@@ -1,7 +1,3 @@
-# Apache-2.0 License 
-# Copyright (c) 2023 Austin Lucas Lake <53884490+austinlucaslake@users.noreply.github.com>
-#
-# Main CMake Project file
 cmake_minimum_required(VERSION 3.28 FATAL_ERROR)
 
 project(
@@ -28,5 +24,7 @@ if(CMAKE_PROJECT_NAME STREQUAL PROJECT_NAME)
         message(STATUS "Doxygen not found, not building docs")
     endif()
 endif()
+
+add_compile_options(-Wall -Wextra -Wpedantic -O3)
 
 add_subdirectory(src)
