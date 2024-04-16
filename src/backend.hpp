@@ -7,47 +7,75 @@
 #include <QQuickImageProvider>
 #include <QPixmap>
 
-#include <valarray>
+#include <cstddef>
+#include <cstdint>
+#include <ctime>
+#include <cstring>
 #include <string>
 #include <vector>
-#include <tuple>
-#include <ctime>
-#include <cstddef>
+#include <valarray>
+#include <array>
 #include <iostream>
 #include <optional>
-#include <typeinfo>
 #include <filesystem>
+#include <execution>
+#include <chrono>
+
 #include <glob.h>
 
+using std::cout;
+using std::cerr;
+using std::endl;
+using std::size_t;
+using std::uint16_t;
+using std::string;
+using std::vector;
+using std::array;
+using std::optional;
+using std::for_each;
+using std::move;
+using std::execution::par_unseq;
+using std::chrono::time_point;
+using std::chrono::system_clock;
+using std::chrono::steady_clock;
+using cv::Mat;
+using cv::KeyPoint;
+
 namespace astrosight {
+
+typedef enum color_mode_t {
+    monochrome = 0,
+    colored = 1,
+} color_mode;
 
 typedef enum image_type_t {
     light = 0,
     dark = 1,
     flat = 2,
     dark_flat = 3,
-    bias = 4
+    bias = 4,
+    blue = 5,
+    green = 6,
+    red = 7
 } image_type;
 
 typedef struct image_t {
-    cv::Mat matrix;
-    std::string file;
-    astrosight::image_type type;
-    std::time_t time;
-    std::string make;
-    std::string model;
+    Mat matrix;
+    string file;
+    image_type type;
+    time_t time;
+    string make;
+    string model;
     float iso;
     float shutter_speed;
     float aperture;
     float focal_length;
     bool stacked = false;
     bool calibrated = false;
-    bool registered = false;
+    optional<vector<KeyPoint>> keypoints;
 } image;
 
-QImage create_qimage(const astrosight::image& frame, const bool thumbnail);
-
-void display_frame(const astrosight::image& frame);
+vector<string> select_files(string pattern);
 
 class Backend : public QQuickImageProvider {
 public:
@@ -59,34 +87,51 @@ public:
         const QSize &requestedSize
     ) override;
 
-    void select_files(std::string pattern);
+    
+    QImage create_qimage(const image& frame, const bool thumbnail);
 
-private:
-
-    std::optional<astrosight::image> load_frame(const std::string file, const astrosight::image_type type);
+    void load_frames(vector<string>& file, image_type type);
 
     void generate_master_frames();
 
     void calibrate_frames();
 
+    void generate_rgb_frames();
+
     void register_frames();
 
-    void set_preview(const astrosight::image& frame);
+    void stack_frames();
 
-    std::vector<astrosight::image> light_frames;
-    std::vector<astrosight::image> dark_frames;
-    std::vector<astrosight::image> flat_frames;
-    std::vector<astrosight::image> dark_flat_frames;
-    std::vector<astrosight::image> bias_frames;    
-    std::optional<astrosight::image> stacked_image;
-    std::optional<astrosight::image> master_dark_frame;
-    std::optional<astrosight::image> master_flat_frame;
-    std::optional<astrosight::image> master_dark_flat_frame;
-    std::optional<astrosight::image> master_bias_frame;
-    int reference_index;
-    astrosight::image const * preview;
+    void set_preview(image& frame);
+
+    void display_frame(const image& frame);
+
+    bool quiet = false;
+
+private:
+
+    vector<image> light_frames;
+    vector<image> blue_frames;
+    vector<image> green_frames;
+    vector<image> red_frames;
+    vector<image> dark_frames;
+    vector<image> flat_frames;
+    vector<image> dark_flat_frames;
+    vector<image> bias_frames;    
+    optional<image> stacked_image;
+    optional<image> master_dark_frame;
+    optional<image> master_flat_frame;
+    optional<image> master_dark_flat_frame;
+    optional<image> master_bias_frame;
+    image* reference_frame;
+    image* preview;
     cv::Ptr<cv::Feature2D> detector = cv::ORB::create();
-    cv::Ptr<cv::DescriptorMatcher> matcher = cv::BFMatcher::create(cv::NORM_HAMMING, true);
+    cv::Ptr<cv::DescriptorMatcher> matcher = cv::BFMatcher::create(
+        cv::NORM_HAMMING, 
+        true
+    );
+    color_mode mode = color_mode::colored;
+    int demosaic_algorithm = cv::COLOR_BayerBG2BGR;
 };
 
 }
