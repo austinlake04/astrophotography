@@ -7,7 +7,7 @@ set(target gui)
 set(sources
     main.qml
     backend.cpp
-    gui.cpp
+    main.cpp
 )
 
 find_package(argparse REQUIRED)
