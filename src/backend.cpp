@@ -120,7 +120,7 @@ void astrosight::Backend::load_frames(vector<string>& files, image_type type) {
                         0,
                         0,
                         0,
-                        0,
+                        0
                     );
                 } else {
                     LibRaw raw;
@@ -152,7 +152,7 @@ void astrosight::Backend::load_frames(vector<string>& files, image_type type) {
                             move(raw.imgdata.other.iso_speed),
                             move(raw.imgdata.other.shutter),
                             move(raw.imgdata.other.aperture),
-                            move(raw.imgdata.other.focal_len),
+                            move(raw.imgdata.other.focal_len)
                         );
                     }
                     raw.recycle();
@@ -173,14 +173,6 @@ void astrosight::Backend::calibrate_frames() {
                 if (!frame.calibrated) {
                     if (this->master_dark_frame) {
                         frame.matrix = 1.0 * frame.matrix - (*this->master_dark_frame).matrix;
-                        /*
-                        cv::subtract(
-                            frame.matrix, 
-                            (*this->master_dark_frame).matrix, 
-                            frame.matrix, 
-                            CV_32FC1
-                        );
-                        */
                     }
                     if (this->master_flat_frame) {
                         if (this->master_dark_flat_frame) {
@@ -193,14 +185,6 @@ void astrosight::Backend::calibrate_frames() {
                             frame.matrix = 1.0 * frame.matrix /
                                 (*this->master_flat_frame).matrix;
                         }
-                        /*
-                        cv::divide(
-                            frame.matrix,
-                            (*this->master_flat_frame).matrix, 
-                            frame.matrix,
-                            CV_32FC1
-                        );
-                        */
                     }
                     frame.calibrated = true;
                 }
@@ -244,7 +228,9 @@ void astrosight::Backend::create_rgb_frames() {
         case color_mode::monochrome:
             if (blue_frames.size() == green_frames.size() == red_frames.size()) {
                 light_frames.clear();
-                for (auto& [blue_frame, green_frame, red_frame] : std::views::zip(blue_frames, green_frames, red_frames)) {
+                for (std::tuple<image, image, image>& [blue_frame, green_frame, red_frame] :
+		    std::ranges::zip_view(blue_frames, green_frames, red_frames)
+                ) {
                     Mat matrix = cv::merge(
                         blue_frame.matrix,
                         green_frame.matrix,
@@ -275,20 +261,20 @@ void astrosight::Backend::create_rgb_frames() {
 }
 
 void astrosight::Backend::register_frames() {
-    if (reference_frame == std::nullptr_t) {
+    if (!reference_frame) {
         if (!quiet) { cout << "No reference frame selected. Selecting for you." << endl; }
         switch (mode) {
             case color_mode::colored:
-                if (light_frames.size()) { reference_frame = &light_frames[0]; }
+                if (light_frames.size()) { reference_frame = make_shared<image>(light_frames[0]); }
                 else {
                     cerr << "No frames loaded. Unable to auto-select a reference frame." << endl;
                     return;
                 }
                 break;
             case color_mode::monochrome:
-                if (blue_frames.size()) { reference_frame = &blue_frames[0]; }
-                else if (red_frames.size()) { reference_frame = &green_frames[0]; }
-                else if (red_frames.size()) { reference_frame = &red_frames[0]; }
+                if (blue_frames.size()) { reference_frame = make_shared<image>(blue_frames[0]); }
+                else if (red_frames.size()) { reference_frame = make_shared<image>(green_frames[0]); }
+                else if (red_frames.size()) { reference_frame = make_shared<image>(red_frames[0]); }
                 else {
                     cerr << "No frames loaded. Unable to auto-select a reference frame." << endl;
                     return;
@@ -312,9 +298,9 @@ void astrosight::Backend::register_frames() {
         par_unseq,
         light_frames.begin(),
         light_frames.end(),
-        [this, &reference_descriptors](image& frame) {
+        [this, &reference_keypoints, &reference_descriptors](image& frame) {
             vector<KeyPoint> keypoints;
-            if (this->reference_frame == &frame) {    
+            if (this->reference_frame.get() == &frame) {    
                 Mat descriptors;
                 this->detector->detectAndCompute(
                     frame.matrix,
@@ -338,7 +324,6 @@ void astrosight::Backend::register_frames() {
                     }
                 );
 
-                const size_t num = matches.size();
                 vector<cv::Point2f> points, reference_points;
                 points.reserve(matches.size());
                 reference_points.reserve(matches.size());
@@ -371,11 +356,7 @@ void astrosight::Backend::register_frames() {
                         homography,
                         frame.matrix.size()
                     );
-                    //vector<KeyPoint> keypoints;
-                    const size_t n = keypoints.size();
-                    //cv::perspectiveTransform(keypoints, keypoints, homography);
-                    const bool is_size_constant = n==keypoints.size();
-                    cout << is_size_constant << endl;
+                    cv::perspectiveTransform(keypoints, keypoints, homography);
                 } catch (const std::exception& err) {
                     cerr << err.what() << endl;
                 }
@@ -385,7 +366,7 @@ void astrosight::Backend::register_frames() {
     );
 }
 
-void astrosight::Backend::generate_master_frames() {
+void astrosight::Backend::create_master_frames() {
     auto average = [](
         const vector<image>& frames
     ) {
@@ -440,7 +421,7 @@ void astrosight::Backend::stack_frames() {
         )/light_frames.size();
         */
         
-        Mat master_matrix();
+        Mat master_matrix;
         for (image& frame: light_frames) { master_matrix += 1.0 * frame.matrix; }
         
         master_frame = (image) {
@@ -463,9 +444,9 @@ void astrosight::Backend::stack_frames() {
     stacked_image = master_frame;
 }
 
-void astrosight::Backend::set_preview(image& frame) { preview = &frame; }
+void astrosight::Backend::set_preview(image& frame) { preview_frame = std::make_shared<image>(frame); }
 
-void astrosight::display_frame(const image& frame) {
+void astrosight::Backend::display_frame(const image& frame) {
     if (!frame.matrix.empty()) {
         Mat downsized_frame;
         cv::resize(

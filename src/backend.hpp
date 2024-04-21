@@ -7,39 +7,42 @@
 #include <QQuickImageProvider>
 #include <QPixmap>
 
+
+#include <array>
+#include <chrono>
 #include <cstddef>
 #include <cstdint>
-#include <ctime>
 #include <cstring>
-#include <string>
-#include <vector>
-#include <valarray>
-#include <array>
+#include <ctime>
+#include <execution>
+#include <filesystem>
 #include <iostream>
 #include <optional>
-#include <filesystem>
-#include <execution>
-#include <chrono>
+#include <ranges>
+#include <string>
+#include <valarray>
+#include <vector>
 
 #include <glob.h>
 
-using std::cout;
-using std::cerr;
-using std::endl;
-using std::size_t;
-using std::uint16_t;
-using std::string;
-using std::vector;
+using cv::Mat;
+using cv::KeyPoint;
 using std::array;
-using std::optional;
-using std::for_each;
-using std::move;
-using std::execution::par_unseq;
+using std::cerr;
 using std::chrono::time_point;
 using std::chrono::system_clock;
 using std::chrono::steady_clock;
-using cv::Mat;
-using cv::KeyPoint;
+using std::cout;
+using std::endl;
+using std::execution::par_unseq;
+using std::for_each;
+using std::move;
+using std::make_shared;
+using std::optional;
+using std::size_t;
+using std::string;
+using std::uint16_t;
+using std::vector;
 
 namespace astrosight {
 
@@ -92,11 +95,11 @@ public:
 
     void load_frames(vector<string>& file, image_type type);
 
-    void generate_master_frames();
+    void create_master_frames();
 
     void calibrate_frames();
 
-    void generate_rgb_frames();
+    void create_rgb_frames();
 
     void register_frames();
 
@@ -123,8 +126,8 @@ private:
     optional<image> master_flat_frame;
     optional<image> master_dark_flat_frame;
     optional<image> master_bias_frame;
-    image* reference_frame;
-    image* preview;
+    std::shared_ptr<image> reference_frame;
+    std::shared_ptr<image> preview_frame;
     cv::Ptr<cv::Feature2D> detector = cv::ORB::create();
     cv::Ptr<cv::DescriptorMatcher> matcher = cv::BFMatcher::create(
         cv::NORM_HAMMING, 

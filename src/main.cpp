@@ -52,52 +52,54 @@ int main(int argc, char *argv[]) {
     time_point<steady_clock> start, stop;
     std::chrono::duration<double, std::milli> duration_ms;
     
+    unsigned n = 0;
+
     for (const image_type& type : types) {
         string full_pattern = "/media/ubuntu/512MicroSSD/test_data/cocoon/" + folders[static_cast<int>(type)] + "/*.CR2";
         vector<string> files = astrosight::select_files(full_pattern);
-        
+        if (type == image_type::light) { n = files.size(); }
         start = steady_clock::now(); 
         backend.load_frames(files, type);
         duration_ms = steady_clock::now() - start; 
-        if (!quiet) {
-            cout << "time (ms) to load " << files.size() << " " << folders[static_cast<int>(type)] << " frames:\t" << duration_ms.count() << endl;
+        if (!backend.quiet) {
+            cout << "time (ms) to load " << n << " " << folders[static_cast<int>(type)] << " frames:\t" << duration_ms.count() << endl;
         }
     };
     return 0;
 
     start = steady_clock::now(); 
-    backend.generate_master_frames(); 
+    backend.create_master_frames(); 
     duration_ms = steady_clock::now() - start; 
-    if (!quiet) {
+    if (!backend.quiet) {
         cout << "time (ms) to generate master frames:\t" << duration_ms.count() << endl;
     }
 
     start = steady_clock::now(); 
     backend.calibrate_frames();
     duration_ms = steady_clock::now() - start; 
-    if (!quiet) {
-        cout << "time (ms) to calibrate " << backend.light_frames.size() << " light frames:\t" << duration_ms.count() << endl;
+    if (!backend.quiet) {
+        cout << "time (ms) to calibrate " << n << " light frames:\t" << duration_ms.count() << endl;
     }
     
     start = steady_clock::now(); 
     backend.create_rgb_frames(); 
     duration_ms = steady_clock::now() - start; 
-    if (!quiet) {
-        cout << "time (ms) to demosaic " << backend.light_frames.size() << " light frames:\t" << duration_ms.count() << endl;
+    if (!backend.quiet) {
+        cout << "time (ms) to demosaic " << n << " light frames:\t" << duration_ms.count() << endl;
     } 
 
     start = steady_clock::now(); 
     backend.register_frames();
     duration_ms = steady_clock::now() - start; 
-    if (!quiet) {
-        cout << "time (ms) to register " << backend.light_frames.size() << " light frames:\t" << duration_ms.count() << endl;
+    if (!backend.quiet) {
+        cout << "time (ms) to register " << n << " light frames:\t" << duration_ms.count() << endl;
     }
     
     start = steady_clock::now(); 
     backend.stack_frames();
     duration_ms = steady_clock::now() - start; 
-    if (!quiet) {
-        cout << "time (ms) to register " << backend.light_frames.size() << " light frames:\t" << duration_ms.count() << endl;
+    if (!backend.quiet) {
+        cout << "time (ms) to register " << n << " light frames:\t" << duration_ms.count() << endl;
     }
 
     /*
