@@ -26,9 +26,9 @@ class Recipe(ConanFile):
         self.requires("jasper/4.2.0", override=True)
         self.requires("freetype/2.13.2", override=True)
         self.requires("libpng/1.6.42", override=True)
-        #self.requires("expat/2.6.0", override=True) 
+        # self.requires("expat/2.6.0", override=True) 
         self.requires("xkbcommon/1.5.0", override=True)
-        #self.requires("libxml/2.12.3", override=True)
+        # self.requires("libxml/2.12.3", override=True)
 
     def build_requirements(self):
         self.tool_requires("cmake/[>3.28]")
