@@ -1,6 +1,9 @@
 name: CI
 
-on: [push, pull_request]
+on:
+  push:
+    branches: main
+  pull_request: {}
 
 permissions:
   contents: read
@@ -11,17 +14,37 @@ jobs:
     defaults:
       run:
         shell: sh -l {0}
-
     strategy:
       fail-fast: true
       matrix:
         os: ubuntu-latest
-
+        compilier: [gcc, clang]
     steps:
       - name: Checkout repository
         uses: actions/checkout@v3
-      - name: Setup Python
-        uses: actions/setup-python@v4
-      - name: ruff
-        uses: chartboost/ruff-action@v1
-
+      - name: clang-format
+        uses: RafikFarhad/clang-format-github-action@v3
+        with:
+          sources: "src/**/*.h,src/**/*.c,test/**/*.c,src/**/*.hpp,src/**/*.cpp,test/**/*.cpp"
+      - name: clang-tidy
+        uses: asarium/clang-tidy-action@v1
+      - name: uncrustify
+        uses: coleaeason/actions-uncrustify@v1
+      - name: cppcheck
+        uses: deep5050/cppcheck-action@main
+      - name: include-what-you-use
+        uses: EmilGedda/include-what-you-use-action@v1
+      - name: Install compiler
+        id: install_compiler
+        uses: rlalik/setup-cpp-compiler@master
+        with:
+          compiler: ${{ matrix.compilier }}
+      - name: Setup CMake
+        uses: jwlawson/actions-setup-cmake@v1.13
+      - name: Run CMake
+        uses: johelegp/modern-cmake-buildsystem@v1
+        env:
+          CC: ${{ steps.install_compiler.outputs.cc }}
+          CXX: ${{ steps.install_compiler.outputs.cxx }}
+        with:
+          generate-options: "--preset=test"
