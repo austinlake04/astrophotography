@@ -13,6 +13,7 @@ vector<string> astrosight::select_files(const string pattern) {
     return {};
 }
 
+/*
 QImage astrosight::Backend::requestImage(
     const QString &id,
     QSize *size,
@@ -62,6 +63,7 @@ QImage astrosight::Backend::create_qimage(const image& frame, const bool thumbna
         QImage::Format_Grayscale16
     ).rgbSwapped();
 }
+*/
 
 void astrosight::Backend::load_frames(vector<string>& files, image_type type) {
     vector<image>& frames = light_frames;
@@ -90,27 +92,24 @@ void astrosight::Backend::load_frames(vector<string>& files, image_type type) {
         default:
             break;
     }
-    std::for_each(
-        files.begin(),
-        files.end(),
-        [&type, &frames](string& file){
-            if (std::find_if(frames.begin(), frames.end(), [&file](const image& frame) { return frame.file == file; }) == frames.end()) {
-                const array<string, 3> fits_files = {".fits", ".fts", ".fit"};
-                if (std::find(fits_files.begin(), fits_files.end(), std::filesystem::path(file).extension()) != fits_files.end()) {
-                    CCfits::FITS fits(file, CCfits::Read, true);
-                    CCfits::PHDU& raw = fits.pHDU(); 
-                    raw.readAllKeys();
-                    std::valarray<uint16_t> contents;
-                    raw.read(contents);
-                    size_t height = raw.axis(0);
-                    size_t width = raw.axis(1);
-                    Mat frame(height, width, CV_16UC1);
-                    std::memmove(
-                        frame.data,
-                        static_cast<void*>(&contents),
-                        height*width*sizeof(uint16_t)
-                    );
-                    frames.emplace_back(
+    for (string file : files) {
+        if (std::find_if(frames.begin(), frames.end(), [&file](const image& frame) { return frame.file == file; }) == frames.end()) {
+            const array<string, 3> fits_files = {".fits", ".fts", ".fit"};
+            if (std::find(fits_files.begin(), fits_files.end(), std::filesystem::path(file).extension()) != fits_files.end()) {
+                CCfits::FITS fits(file, CCfits::Read, true);
+                CCfits::PHDU& raw = fits.pHDU(); 
+                raw.readAllKeys();
+                std::valarray<uint16_t> contents;
+                raw.read(contents);
+                size_t height = raw.axis(0);
+                size_t width = raw.axis(1);
+                Mat frame(height, width, CV_16UC1);
+                std::memmove(
+                    frame.data,
+                    static_cast<void*>(&contents),
+                    height*width*sizeof(uint16_t)
+                );
+                frames.push_back((astrosight::image) {
                         move(frame),
                         move(file),
                         move(type),
@@ -121,75 +120,68 @@ void astrosight::Backend::load_frames(vector<string>& files, image_type type) {
                         0,
                         0,
                         0
+                });
+            } else {
+                LibRaw raw;
+                if (raw.open_file(file.c_str()) == LIBRAW_SUCCESS) {
+                    raw.unpack();
+                    size_t raw_height = raw.imgdata.sizes.raw_height;
+                    size_t raw_width = raw.imgdata.sizes.raw_width;
+                    Mat frame(raw_height, raw_width, CV_16UC1);
+                    std::memmove(
+                        frame.data,
+                        raw.imgdata.rawdata.raw_image,
+                        raw_height*raw_width*sizeof(uint16_t)
                     );
-                } else {
-                    LibRaw raw;
-                    if (raw.open_file(file.c_str()) == LIBRAW_SUCCESS) {
-                        raw.unpack();
-                        size_t raw_height = raw.imgdata.sizes.raw_height;
-                        size_t raw_width = raw.imgdata.sizes.raw_width;
-                        Mat frame(raw_height, raw_width, CV_16UC1);
-                        std::memmove(
-                            frame.data,
-                            raw.imgdata.rawdata.raw_image,
-                            raw_height*raw_width*sizeof(uint16_t)
-                        );
-                        /* Some RAW images have a frame of pixel that line the top and
-                        * left of the image that must be cropped out.
-                        */
-                        frames.emplace_back(
-                            move(frame(cv::Rect(
-                                raw.imgdata.sizes.left_margin,
-                                raw.imgdata.sizes.top_margin,
-                                raw.imgdata.sizes.width,
-                                raw.imgdata.sizes.height
-                            ))),
-                            move(file),
-                            move(type),
-                            move(raw.imgdata.other.timestamp),
-                            move(raw.imgdata.idata.make),
-                            move(raw.imgdata.idata.model),
-                            move(raw.imgdata.other.iso_speed),
-                            move(raw.imgdata.other.shutter),
-                            move(raw.imgdata.other.aperture),
-                            move(raw.imgdata.other.focal_len)
-                        );
-                    }
-                    raw.recycle();
+                    /* Some RAW images have a frame of pixel that line the top and
+                    * left of the image that must be cropped out.
+                    */
+                    frames.push_back((astrosight::image) {
+                        move(frame(cv::Rect(
+                            raw.imgdata.sizes.left_margin,
+                            raw.imgdata.sizes.top_margin,
+                            raw.imgdata.sizes.width,
+                            raw.imgdata.sizes.height
+                        ))),
+                        move(file),
+                        move(type),
+                        move(raw.imgdata.other.timestamp),
+                        move(raw.imgdata.idata.make),
+                        move(raw.imgdata.idata.model),
+                        move(raw.imgdata.other.iso_speed),
+                        move(raw.imgdata.other.shutter),
+                        move(raw.imgdata.other.aperture),
+                        move(raw.imgdata.other.focal_len)
+                    });
                 }
+                raw.recycle();
             }
-
         }
-    );
+    }
 }
 
 void astrosight::Backend::calibrate_frames() {
     auto calibration = [this](vector<image>& frames){
-        for_each(
-            par_unseq,
-            frames.begin(),
-            frames.end(),
-            [this](image& frame) {
-                if (!frame.calibrated) {
-                    if (this->master_dark_frame) {
-                        frame.matrix = 1.0 * frame.matrix - (*this->master_dark_frame).matrix;
-                    }
-                    if (this->master_flat_frame) {
-                        if (this->master_dark_flat_frame) {
-                            frame.matrix = 1.0 * frame.matrix / 
-                                ((*this->master_flat_frame).matrix - (*this->master_dark_flat_frame).matrix);
-                        } else if (this->master_bias_frame) {
-                            frame.matrix = 1.0 * frame.matrix /
-                                ((*this->master_flat_frame).matrix - (*this->master_bias_frame).matrix);
-                        } else {
-                            frame.matrix = 1.0 * frame.matrix /
-                                (*this->master_flat_frame).matrix;
-                        }
-                    }
-                    frame.calibrated = true;
+        for (image& frame : frames ) {
+            if (!frame.calibrated) {
+                if (this->master_dark_frame) {
+                    frame.matrix = 1.0 * frame.matrix - (*this->master_dark_frame).matrix;
                 }
+                if (this->master_flat_frame) {
+                    if (this->master_dark_flat_frame) {
+                        frame.matrix = 1.0 * frame.matrix / 
+                            ((*this->master_flat_frame).matrix - (*this->master_dark_flat_frame).matrix);
+                    } else if (this->master_bias_frame) {
+                        frame.matrix = 1.0 * frame.matrix /
+                            ((*this->master_flat_frame).matrix - (*this->master_bias_frame).matrix);
+                    } else {
+                        frame.matrix = 1.0 * frame.matrix /
+                            (*this->master_flat_frame).matrix;
+                    }
+                }
+                frame.calibrated = true;
             }
-        );
+        }
     };
 
     switch (mode) {
@@ -210,25 +202,21 @@ void astrosight::Backend::calibrate_frames() {
 void astrosight::Backend::create_rgb_frames() {
     switch (mode) {
         case color_mode::colored:
-            for_each(
-                par_unseq,
-                light_frames.begin(),
-                light_frames.end(),
-                [this](astrosight::image& frame) {
-                    if (frame.matrix.channels() == 1) {
-                        cv::demosaicing(
-                            frame.matrix,
-                            frame.matrix,
-                            this->demosaic_algorithm
-                        );
-                    }
+            for (image& light_frame : light_frames) {
+                if (light_frame.matrix.channels() == 1) {
+                    cv::demosaicing(
+                        light_frame.matrix,
+                        light_frame.matrix,
+                        this->demosaic_algorithm
+                    );
                 }
-            );
+            };
             break;
+        /*
         case color_mode::monochrome:
             if (blue_frames.size() == green_frames.size() == red_frames.size()) {
                 light_frames.clear();
-                for (std::tuple<image, image, image>& [blue_frame, green_frame, red_frame] :
+                for (auto& [blue_frame, green_frame, red_frame] :
 		    std::ranges::zip_view(blue_frames, green_frames, red_frames)
                 ) {
                     Mat matrix = cv::merge(
@@ -254,6 +242,7 @@ void astrosight::Backend::create_rgb_frames() {
                 } 
             }
             break;
+        */
         default:
             break;
     }
@@ -294,76 +283,65 @@ void astrosight::Backend::register_frames() {
     );
     reference_frame->keypoints = reference_keypoints;
 
-    for_each(
-        par_unseq,
-        light_frames.begin(),
-        light_frames.end(),
-        [this, &reference_keypoints, &reference_descriptors](image& frame) {
-            vector<KeyPoint> keypoints;
-            if (this->reference_frame.get() == &frame) {    
-                Mat descriptors;
-                this->detector->detectAndCompute(
-                    frame.matrix,
-                    cv::noArray(),
-                    keypoints,
-                    descriptors
-                );
-                
-                vector<cv::DMatch> matches;
-                this->matcher->match(
-                    descriptors,
-                    reference_descriptors,
-                    matches
-                );
-                
-                std::sort(
-                    matches.begin(),
-                    matches.end(),
-                    [](const cv::DMatch& a, const cv::DMatch& b) {
-                        return a.distance > b.distance;
-                    }
-                );
-
-                vector<cv::Point2f> points, reference_points;
-                points.reserve(matches.size());
-                reference_points.reserve(matches.size());
-
-                for_each(
-                    matches.begin(),
-                    matches.end(),
-                    [&reference_points, &reference_keypoints, &points, &keypoints](
-                        const cv::DMatch& match
-                    ) {
-                        reference_points.emplace_back(
-                            reference_keypoints[match.queryIdx].pt
-                        );
-                        points.emplace_back(
-                            keypoints[match.queryIdx].pt
-                        );
-                    }
-                );
-                
-
-                try {
-                    const cv::Mat homography = cv::findHomography(
-                        points,
-                        reference_points,
-                        cv::RANSAC
-                    );
-                    cv::warpPerspective(
-                        frame.matrix,
-                        frame.matrix,
-                        homography,
-                        frame.matrix.size()
-                    );
-                    cv::perspectiveTransform(keypoints, keypoints, homography);
-                } catch (const std::exception& err) {
-                    cerr << err.what() << endl;
+    for (image& light_frame : light_frames) {
+        vector<KeyPoint> keypoints;
+        if (reference_frame.get() == &light_frame) {    
+            Mat descriptors;
+            this->detector->detectAndCompute(
+                light_frame.matrix,
+                cv::noArray(),
+                keypoints,
+                descriptors
+            );
+            
+            vector<cv::DMatch> matches;
+            this->matcher->match(
+                descriptors,
+                reference_descriptors,
+                matches
+            );
+            
+            std::sort(
+                matches.begin(),
+                matches.end(),
+                [](const cv::DMatch& a, const cv::DMatch& b) {
+                    return a.distance > b.distance;
                 }
+            );
+
+            vector<cv::Point2f> points, reference_points;
+            points.reserve(matches.size());
+            reference_points.reserve(matches.size());
+
+            for (cv::DMatch& match : matches) {
+                reference_points.emplace_back(
+                    reference_keypoints[match.queryIdx].pt
+                );
+                points.emplace_back(
+                    keypoints[match.queryIdx].pt
+                );
             }
-            frame.keypoints = keypoints;
-        } 
-    );
+            
+
+            try {
+                const cv::Mat homography = cv::findHomography(
+                    points,
+                    reference_points,
+                    cv::RANSAC
+                );
+                cv::warpPerspective(
+                    light_frame.matrix,
+                    light_frame.matrix,
+                    homography,
+                    light_frame.matrix.size()
+                );
+                // cv::perspectiveTransform(keypoints, keypoints, homography);
+            } catch (const std::exception& err) {
+                cerr << err.what() << endl;
+            }
+        }
+        light_frame.keypoints = keypoints;
+    }
 }
 
 void astrosight::Backend::create_master_frames() {
@@ -421,7 +399,7 @@ void astrosight::Backend::stack_frames() {
         )/light_frames.size();
         */
         
-        Mat master_matrix;
+        Mat master_matrix(light_frames[0].matrix.size(), CV_16UC3);
         for (image& frame: light_frames) { master_matrix += 1.0 * frame.matrix; }
         
         master_frame = (image) {
@@ -446,7 +424,7 @@ void astrosight::Backend::stack_frames() {
 
 void astrosight::Backend::set_preview(image& frame) { preview_frame = std::make_shared<image>(frame); }
 
-void astrosight::Backend::display_frame(const image& frame) {
+void astrosight::display_frame(const image& frame) {
     if (!frame.matrix.empty()) {
         Mat downsized_frame;
         cv::resize(

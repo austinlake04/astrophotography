@@ -1,13 +1,7 @@
-#include <QGuiApplication>
-#include <QQmlApplicationEngine>
-#include <QObject>
-#include <QQmlContext>
 #include <string>
 #include <argparse/argparse.hpp>
 
 #include "backend.hpp"
-
-using astrosight::image_type;
 
 int main(int argc, char *argv[]) {
     /*
@@ -41,12 +35,13 @@ int main(int argc, char *argv[]) {
     backend.quiet = args.get<bool>("--quiet");
 
     
-    const array<string, 5> folders = { "light", "dark", "flat", "bias" };
-    const vector<image_type> types = {
-        image_type::light,
-        image_type::dark,
-        image_type::flat,
-        image_type::bias
+    const array<string, 5> folders = { "light", "dark", "flat", "dark_flat", "bias" };
+    const vector<astrosight::image_type> types = {
+        astrosight::image_type::light,
+        astrosight::image_type::dark,
+        astrosight::image_type::flat,
+        astrosight::image_type::dark_flat,
+        astrosight::image_type::bias
     };
     
     time_point<steady_clock> start, stop;
@@ -54,18 +49,17 @@ int main(int argc, char *argv[]) {
     
     unsigned n = 0;
 
-    for (const image_type& type : types) {
+    for (const astrosight::image_type& type : types) {
         string full_pattern = "/media/ubuntu/512MicroSSD/test_data/cocoon/" + folders[static_cast<int>(type)] + "/*.CR2";
         vector<string> files = astrosight::select_files(full_pattern);
-        if (type == image_type::light) { n = files.size(); }
+        if (type == astrosight::image_type::light) { n = files.size(); }
         start = steady_clock::now(); 
         backend.load_frames(files, type);
         duration_ms = steady_clock::now() - start; 
         if (!backend.quiet) {
-            cout << "time (ms) to load " << n << " " << folders[static_cast<int>(type)] << " frames:\t" << duration_ms.count() << endl;
+            cout << "time (ms) to load " << files.size() << " " << folders[static_cast<int>(type)] << " frames:\t" << duration_ms.count() << endl;
         }
     };
-    return 0;
 
     start = steady_clock::now(); 
     backend.create_master_frames(); 
@@ -99,16 +93,12 @@ int main(int argc, char *argv[]) {
     backend.stack_frames();
     duration_ms = steady_clock::now() - start; 
     if (!backend.quiet) {
-        cout << "time (ms) to register " << n << " light frames:\t" << duration_ms.count() << endl;
+        cout << "time (ms) to stack " << n << " light frames:\t" << duration_ms.count() << endl;
     }
 
-    /*
-    average(backend.stacked_image, backend.light_frames); 
     if (backend.stacked_image) {
         astrosight::display_frame(*backend.stacked_image);
     }
-    */
-    
 
     /*
     string file = "L_0055_ISO800_240s__18C.CR2";

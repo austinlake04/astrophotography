@@ -4,9 +4,6 @@
 #include <CCfits/CCfits>
 #include "libraw/libraw.h"
 #include <opencv2/opencv.hpp>
-#include <QQuickImageProvider>
-#include <QPixmap>
-
 
 #include <array>
 #include <chrono>
@@ -80,36 +77,27 @@ typedef struct image_t {
 
 vector<string> select_files(string pattern);
 
-class Backend : public QQuickImageProvider {
+class Backend {
 public:
-	Backend() : QQuickImageProvider(QQuickImageProvider::Image) {};
-
+	Backend() {};
+    /*
 	QImage requestImage(
         const QString &id,
         QSize *size,
         const QSize &requestedSize
     ) override;
-
-    
     QImage create_qimage(const image& frame, const bool thumbnail);
-
+    */
     void load_frames(vector<string>& file, image_type type);
-
     void create_master_frames();
-
     void calibrate_frames();
-
     void create_rgb_frames();
-
     void register_frames();
-
     void stack_frames();
-
     void set_preview(image& frame);
 
-    void display_frame(const image& frame);
-
     bool quiet = false;
+    optional<image> stacked_image;
 
 private:
 
@@ -121,7 +109,6 @@ private:
     vector<image> flat_frames;
     vector<image> dark_flat_frames;
     vector<image> bias_frames;    
-    optional<image> stacked_image;
     optional<image> master_dark_frame;
     optional<image> master_flat_frame;
     optional<image> master_dark_flat_frame;
@@ -136,6 +123,8 @@ private:
     color_mode mode = color_mode::colored;
     int demosaic_algorithm = cv::COLOR_BayerBG2BGR;
 };
+
+void display_frame(const image& frame);
 
 }
 

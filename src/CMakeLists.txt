@@ -15,26 +15,27 @@ find_package(ccfits REQUIRED)
 find_package(libraw REQUIRED)
 find_package(OpenCV REQUIRED)
 
-set(Qt_LIBS
-    Qt6::Core
-    Qt6::Gui
-    Qt6::Qml
-    Qt6::Quick
+set(Qt6_LIBS
+    Core
+    Gui
+    Qml
 )
-find_package(Qt6 REQUIRED COMPONENTS ${Qt_LIBS})
+find_package(Qt6 REQUIRED COMPONENTS ${Qt6_LIBS})
+
+option(WITH_QT "Turn QT on" ON)
+option(WITH_GTK "Turn GTK off" OFF)
+option(WITH_WIN32UI "Turn Win32UI off" OFF)
 
 include_directories(
 	${libraw_INCLUDE_DIRS}
 	${OpenCV_INCLUDE_DIRS}
-	${Qt6_INCLUDE_DIRS}
-	${Qt6Core_INCLUDE_DIRS}
-	${Qt6Gui_INCLUDE_DIRS}
+    ${Qt6Core_INCLUDE_DIRS}
+    ${Qt6Gui_INCLUDE_DIRS}
 	${Qt6Qml_INCLUDE_DIRS}
-	${Qt6Quick_INCLUDE_DIRS}
 )
 
 add_executable(${target}
     ${sources}
 )
 
-target_link_libraries(${target} argparse::argparse ccfits::ccfits libraw::libraw ${OpenCV_LIBS} ${Qt_LIBS})
+target_link_libraries(${target} argparse::argparse ccfits::ccfits libraw::libraw ${OpenCV_LIBS} Qt6::Core Qt6::Gui Qt6::Qml)
