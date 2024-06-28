@@ -43,12 +43,12 @@ using std::vector;
 
 namespace astrosight {
 
-typedef enum color_mode_t {
+typedef enum {
     monochrome = 0,
     colored = 1,
-} color_mode;
+} color_mode_t;
 
-typedef enum image_type_t {
+typedef enum {
     light = 0,
     dark = 1,
     flat = 2,
@@ -57,12 +57,16 @@ typedef enum image_type_t {
     blue = 5,
     green = 6,
     red = 7
-} image_type;
+} image_type_t;
 
-typedef struct image_t {
-    Mat matrix;
+typedef struct {
+    Mat frame;
     string file;
-    image_type type;
+    bool calibrated = false;
+    optional<vector<KeyPoint>> keypoints;
+} image_t;
+/*
+    image_type_t type;
     time_t time;
     string make;
     string model;
@@ -71,9 +75,7 @@ typedef struct image_t {
     float aperture;
     float focal_length;
     bool stacked = false;
-    bool calibrated = false;
-    optional<vector<KeyPoint>> keypoints;
-} image;
+*/
 
 vector<string> select_files(string pattern);
 
@@ -86,45 +88,45 @@ public:
         QSize *size,
         const QSize &requestedSize
     ) override;
-    QImage create_qimage(const image& frame, const bool thumbnail);
+    QImage create_qimage(const image_t&  frame, const bool thumbnail);
     */
-    void load_frames(vector<string>& file, image_type type);
+    void load_frames(vector<string>& file, image_type_t type);
     void create_master_frames();
     void calibrate_frames();
     void create_rgb_frames();
     void register_frames();
     void stack_frames();
-    void set_preview(image& frame);
+    void set_preview(image_t&  frame);
 
     bool quiet = false;
-    optional<image> stacked_image;
+    optional<image_t> stacked_image;
+    vector<image_t> light_images;
 
 private:
 
-    vector<image> light_frames;
-    vector<image> blue_frames;
-    vector<image> green_frames;
-    vector<image> red_frames;
-    vector<image> dark_frames;
-    vector<image> flat_frames;
-    vector<image> dark_flat_frames;
-    vector<image> bias_frames;    
-    optional<image> master_dark_frame;
-    optional<image> master_flat_frame;
-    optional<image> master_dark_flat_frame;
-    optional<image> master_bias_frame;
-    std::shared_ptr<image> reference_frame;
-    std::shared_ptr<image> preview_frame;
+    vector<image_t> blue_images;
+    vector<image_t> green_images;
+    vector<image_t> red_images;
+    vector<image_t> dark_images;
+    vector<image_t> flat_images;
+    vector<image_t> dark_flat_images;
+    vector<image_t> bias_images;    
+    optional<image_t> master_dark_image;
+    optional<image_t> master_flat_image;
+    optional<image_t> master_dark_flat_image;
+    optional<image_t> master_bias_image;
+    std::shared_ptr<image_t> reference_image;
+    std::shared_ptr<image_t> preview_image;
     cv::Ptr<cv::Feature2D> detector = cv::ORB::create();
     cv::Ptr<cv::DescriptorMatcher> matcher = cv::BFMatcher::create(
         cv::NORM_HAMMING, 
         true
     );
-    color_mode mode = color_mode::colored;
+    color_mode_t color_mode = color_mode_t::colored;
     int demosaic_algorithm = cv::COLOR_BayerBG2BGR;
 };
 
-void display_frame(const image& frame);
+void display_frame(const image_t& frame);
 
 }
 

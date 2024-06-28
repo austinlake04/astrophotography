@@ -14,11 +14,10 @@ find_package(argparse REQUIRED)
 find_package(ccfits REQUIRED)
 find_package(libraw REQUIRED)
 find_package(OpenCV REQUIRED)
-
 set(Qt6_LIBS
-    Core
-    Gui
-    Qml
+    Qt6::Core
+    Qt6::Gui
+    Qt6::Qml
 )
 find_package(Qt6 REQUIRED COMPONENTS ${Qt6_LIBS})
 

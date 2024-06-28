@@ -35,13 +35,14 @@ int main(int argc, char *argv[]) {
     backend.quiet = args.get<bool>("--quiet");
 
     
+    vector<Mat> frames;
     const array<string, 5> folders = { "light", "dark", "flat", "dark_flat", "bias" };
-    const vector<astrosight::image_type> types = {
-        astrosight::image_type::light,
-        astrosight::image_type::dark,
-        astrosight::image_type::flat,
-        astrosight::image_type::dark_flat,
-        astrosight::image_type::bias
+    const vector<astrosight::image_type_t> image_types = {
+        astrosight::image_type_t::light,
+        astrosight::image_type_t::dark,
+        astrosight::image_type_t::flat,
+        astrosight::image_type_t::dark_flat,
+        astrosight::image_type_t::bias
     };
     
     time_point<steady_clock> start, stop;
@@ -49,15 +50,15 @@ int main(int argc, char *argv[]) {
     
     unsigned n = 0;
 
-    for (const astrosight::image_type& type : types) {
-        string full_pattern = "/media/ubuntu/512MicroSSD/test_data/cocoon/" + folders[static_cast<int>(type)] + "/*.CR2";
+    for (const astrosight::image_type_t& image_type : image_types) {
+        string full_pattern = "/media/ubuntu/512MicroSSD/test_data/cocoon/" + folders[static_cast<int>(image_type)] + "/*.CR2";
         vector<string> files = astrosight::select_files(full_pattern);
-        if (type == astrosight::image_type::light) { n = files.size(); }
+        if (image_type == astrosight::image_type_t::light) { n = files.size(); }
         start = steady_clock::now(); 
-        backend.load_frames(files, type);
+        backend.load_frames(files, image_type);
         duration_ms = steady_clock::now() - start; 
         if (!backend.quiet) {
-            cout << "time (ms) to load " << files.size() << " " << folders[static_cast<int>(type)] << " frames:\t" << duration_ms.count() << endl;
+            cout << "time (ms) to load " << files.size() << " " << folders[static_cast<int>(image_type)] << " frames:\t" << duration_ms.count() << endl;
         }
     };
 
@@ -68,6 +69,8 @@ int main(int argc, char *argv[]) {
         cout << "time (ms) to generate master frames:\t" << duration_ms.count() << endl;
     }
 
+    frames.push_back(backend.light_images[0].frame);
+
     start = steady_clock::now(); 
     backend.calibrate_frames();
     duration_ms = steady_clock::now() - start; 
@@ -75,6 +78,8 @@ int main(int argc, char *argv[]) {
         cout << "time (ms) to calibrate " << n << " light frames:\t" << duration_ms.count() << endl;
     }
     
+    frames.push_back(backend.light_images[0].frame);
+
     start = steady_clock::now(); 
     backend.create_rgb_frames(); 
     duration_ms = steady_clock::now() - start; 
@@ -89,6 +94,8 @@ int main(int argc, char *argv[]) {
         cout << "time (ms) to register " << n << " light frames:\t" << duration_ms.count() << endl;
     }
     
+    frames.push_back(backend.light_images[0].frame);
+
     start = steady_clock::now(); 
     backend.stack_frames();
     duration_ms = steady_clock::now() - start; 
@@ -96,11 +103,18 @@ int main(int argc, char *argv[]) {
         cout << "time (ms) to stack " << n << " light frames:\t" << duration_ms.count() << endl;
     }
 
+    frames.push_back(backend.light_images[0].frame);
+    
+    start = steady_clock::now(); 
+    cv::imwrite("test.tiff", frames);
+    duration_ms = steady_clock::now() - start; 
+    cout << "time (ms) to write " << frames.size() << " frames to disk:\t" << duration_ms.count() << endl;
+
+    /*
     if (backend.stacked_image) {
         astrosight::display_frame(*backend.stacked_image);
     }
 
-    /*
     string file = "L_0055_ISO800_240s__18C.CR2";
     if (optional<Mat> frame = astrosight::load_frame(file)) {
         astrosight::display_frame(*frame);
