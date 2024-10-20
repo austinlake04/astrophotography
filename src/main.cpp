@@ -1,7 +1,7 @@
 #include <string>
 #include <argparse/argparse.hpp>
 
-#include "backend.hpp"
+import backend;
 
 int main(int argc, char *argv[]) {
     /*
